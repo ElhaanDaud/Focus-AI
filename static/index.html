@@ -48,9 +48,20 @@
             <div class="relative bg-black rounded-lg overflow-hidden w-full shadow-inner flex items-center justify-center bg-slate-900">
                 <video id="videoInput" class="hidden" playsinline autoplay></video>
                 <canvas id="videoCanvas"></canvas>
+                
+                <!-- Live Indicator -->
                 <div id="overlayInfo" class="absolute top-3 left-3 text-xs bg-black/50 px-2 py-1 rounded text-green-400 font-mono hidden backdrop-blur-sm">
                     ● Live
                 </div>
+
+                <!-- FACE GUIDE OVERLAY (New) -->
+                <div id="faceGuide" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-1000 opacity-0">
+                    <!-- Dashed Oval -->
+                    <div class="w-48 h-64 md:w-56 md:h-72 border-4 border-dashed border-blue-400/70 rounded-[50%] shadow-[0_0_20px_rgba(59,130,246,0.4)] flex items-center justify-center"></div>
+                    <!-- Instruction Text -->
+                    <p class="mt-4 text-blue-200 font-bold bg-black/60 px-3 py-1 rounded-full backdrop-blur-sm shadow-lg">Center Your Face</p>
+                </div>
+
             </div>
             <p class="text-xs text-gray-500 mt-3">
                 Posture and Face metrics are calculated server-side via YOLOv11 & MediaPipe.
@@ -178,6 +189,14 @@
             if (ws) return;
             startCamera();
 
+            // --- Face Guide Logic ---
+            const guide = document.getElementById("faceGuide");
+            guide.classList.remove("opacity-0"); // Show guide
+            setTimeout(() => {
+                guide.classList.add("opacity-0"); // Hide after 5s
+            }, 5000);
+            // ------------------------
+
             // Logic: If running on localhost/file, use localhost. 
             // If accessing via IP (e.g., 192.168.x.x), use that IP.
             let wsHost = "localhost:8000";
@@ -229,6 +248,8 @@
             if (ws) ws.close();
             ws = null;
             intervalId = null;
+            // Also hide guide immediately if stopped
+            document.getElementById("faceGuide").classList.add("opacity-0");
         }
 
         // --- UI Updates ---
