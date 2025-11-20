@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Focus AI Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -10,136 +10,109 @@
     <style>
         body { background-color: #0f172a; color: #e2e8f0; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; }
-        canvas#videoCanvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); border-radius: 8px;}
-        /* Hide scrollbar for cleaner mobile look */
-        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        /* Responsive Canvas: Fit width, maintain aspect ratio */
+        canvas#videoCanvas { 
+            width: 100%; 
+            height: auto; 
+            aspect-ratio: 4/3;
+            transform: scaleX(-1); 
+            border-radius: 8px;
+            object-fit: cover;
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col p-4 font-sans overflow-x-hidden">
+<body class="p-4 md:p-6 font-sans min-h-screen flex flex-col">
 
-    <!-- Header -->
-    <header class="mb-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-50 bg-[#0f172a]/90 backdrop-blur-md py-2 -mx-4 px-4 border-b border-white/5 md:static md:bg-transparent md:border-0 md:mx-0 md:p-0">
-        <div class="flex items-center w-full md:w-auto justify-between md:justify-start">
-             <h1 class="text-xl md:text-2xl font-bold text-white flex items-center">
-                <i class="fas fa-brain text-blue-500 mr-2"></i> Focus AI
-             </h1>
-             <!-- Mobile Status Pill -->
-             <span id="wsStatusMobile" class="md:hidden text-[10px] font-bold px-2 py-1 rounded-full bg-gray-800 text-gray-400 border border-gray-700 uppercase tracking-wider">Offline</span>
-        </div>
-        
-        <div class="flex gap-3 w-full md:w-auto">
-             <button onclick="startSession()" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-6 py-3 md:py-2 rounded-xl transition-all shadow-lg shadow-blue-900/20 font-semibold text-sm md:text-base flex items-center justify-center">
-                <i class="fas fa-play mr-2"></i> Start
+    <!-- Header: Stacks on mobile, Row on desktop -->
+    <header class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <h1 class="text-2xl font-bold text-white flex items-center">
+            <i class="fas fa-brain text-blue-400 mr-2"></i> Focus AI
+        </h1>
+        <div class="flex gap-4 w-full md:w-auto">
+             <button onclick="startSession()" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 md:py-2 rounded-lg transition shadow-lg font-semibold">
+                Start Session
              </button>
-             <button onclick="stopSession()" class="flex-1 md:flex-none bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white px-6 py-3 md:py-2 rounded-xl transition-all shadow-lg shadow-rose-900/20 font-semibold text-sm md:text-base flex items-center justify-center">
-                <i class="fas fa-stop mr-2"></i> Stop
+             <button onclick="stopSession()" class="flex-1 md:flex-none bg-red-600 hover:bg-red-700 text-white px-6 py-3 md:py-2 rounded-lg transition shadow-lg font-semibold">
+                Stop
              </button>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 flex-grow">
+    <!-- Main Grid: 1 Column on Mobile, 3 Columns on Desktop -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
         
-        <!-- LEFT COLUMN: Video & Chart (8 cols on desktop) -->
-        <div class="lg:col-span-8 flex flex-col gap-4">
-            
-            <!-- Video Section -->
-            <div class="glass-panel p-3 md:p-4">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 class="text-sm md:text-lg font-semibold text-gray-200 flex items-center gap-2">
-                        <i class="fas fa-video text-gray-500"></i> Live Monitor
-                    </h2>
-                    <span class="text-[10px] uppercase tracking-widest text-gray-500 bg-slate-900 px-2 py-1 rounded border border-slate-700/50 hidden sm:inline-block">AI Processing Active</span>
+        <!-- LEFT: Video Feed (Spans 2 columns on desktop) -->
+        <div class="lg:col-span-2 glass-panel p-4 flex flex-col">
+            <h2 class="text-lg font-semibold mb-3">Live Attention Monitor</h2>
+            <!-- Container for video to ensure aspect ratio -->
+            <div class="relative bg-black rounded-lg overflow-hidden w-full shadow-inner flex items-center justify-center bg-slate-900">
+                <video id="videoInput" class="hidden" playsinline autoplay></video>
+                <canvas id="videoCanvas"></canvas>
+                <div id="overlayInfo" class="absolute top-3 left-3 text-xs bg-black/50 px-2 py-1 rounded text-green-400 font-mono hidden backdrop-blur-sm">
+                    ● Live
                 </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-3">
+                Posture and Face metrics are calculated server-side via YOLOv11 & MediaPipe.
+            </p>
+        </div>
+
+        <!-- RIGHT: Metrics (Spans 1 column) -->
+        <div class="flex flex-col gap-6">
+            
+            <!-- Real-Time Score -->
+            <div class="glass-panel p-6 flex flex-col items-center justify-center h-full">
+                <h2 class="text-lg font-semibold mb-4">Real-Time Attention</h2>
                 
-                <div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden border border-slate-700/50 shadow-inner">
-                    <video id="videoInput" class="hidden" playsinline autoplay muted></video>
-                    <canvas id="videoCanvas"></canvas>
-                    
-                    <!-- Overlay Elements -->
-                    <div id="overlayInfo" class="absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-xs text-emerald-400 font-mono border border-emerald-500/30 hidden">
-                        ● Live Analysis
+                <div class="relative w-40 h-40 flex items-center justify-center mb-4">
+                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                        <circle class="text-slate-700 stroke-current" stroke-width="10" cx="50" cy="50" r="40" fill="transparent"></circle>
+                        <circle id="scoreCircle" class="text-blue-500 transition-all duration-300 stroke-current" stroke-width="10" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="251.2" transform="rotate(-90 50 50)"></circle>
+                    </svg>
+                    <div class="absolute text-4xl font-bold text-white" id="scoreValue">--</div>
+                </div>
+
+                <div class="space-y-3 text-sm text-center w-full">
+                    <div class="flex justify-between items-center p-2 bg-slate-800/50 rounded">
+                        <span class="text-gray-400">Posture</span> 
+                        <span id="postureStatus" class="font-bold">--</span>
                     </div>
-                    <div class="absolute bottom-3 right-3 text-[10px] text-gray-500 font-mono bg-black/40 px-2 rounded">
-                        YOLO v11n
+                    <div class="flex justify-between items-center p-2 bg-slate-800/50 rounded">
+                        <span class="text-gray-400">Head Yaw</span> 
+                        <span id="yawValue" class="font-mono">0°</span>
+                    </div>
+                    <div class="flex justify-between items-center p-2 bg-slate-800/50 rounded">
+                        <span class="text-gray-400">Phone</span> 
+                        <span id="phoneStatus" class="text-gray-500">None</span>
+                    </div>
+                    <div class="flex justify-between items-center p-2 bg-slate-800/50 rounded">
+                        <span class="text-gray-400">Persons</span> 
+                        <span id="personCount" class="text-gray-300">0</span>
+                    </div>
+                    <div class="flex justify-between pt-2 mt-2 border-t border-gray-700">
+                        <span class="text-gray-400">Connection</span> 
+                        <span id="wsStatus" class="text-red-500 font-mono text-xs">Disconnected</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Chart Section -->
-            <div class="glass-panel p-3 md:p-4 flex-grow min-h-[250px] flex flex-col">
-                <h2 class="text-sm md:text-lg font-semibold mb-2 text-gray-200">Focus Trend (1 Hr)</h2>
-                <div class="relative w-full flex-grow min-h-[200px]">
-                    <canvas id="trendChart"></canvas>
+            <!-- Session Info -->
+            <div class="glass-panel p-4">
+                <h3 class="text-sm font-semibold mb-2 text-gray-300">Session Metrics</h3>
+                <div class="text-xs text-gray-400 space-y-1 font-mono">
+                    <p>User ID: <span class="text-blue-300">demo-user-123</span></p>
+                    <p>Session: <span class="text-blue-300">sess-demo-001</span></p>
+                    <p>Last Sync: <span id="lastSync">--</span></p>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- RIGHT COLUMN: Metrics (4 cols on desktop) -->
-        <div class="lg:col-span-4 flex flex-col gap-4">
-            
-            <!-- Gauge & Stats -->
-            <div class="glass-panel p-4 md:p-6 flex flex-col items-center">
-                <h2 class="text-base font-semibold mb-6 text-gray-300 w-full text-center border-b border-gray-700 pb-2">Real-Time Score</h2>
-                
-                <!-- Gauge -->
-                <div class="relative w-48 h-48 md:w-56 md:h-56 flex items-center justify-center mb-6">
-                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                        <circle class="text-slate-800 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
-                        <circle id="scoreCircle" class="text-blue-500 transition-all duration-500 ease-out stroke-current" 
-                                stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" 
-                                fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="251.2"></circle>
-                    </svg>
-                    <div class="absolute flex flex-col items-center">
-                        <span id="scoreValue" class="text-4xl md:text-5xl font-bold text-white tracking-tighter">--</span>
-                        <span class="text-xs text-gray-500 font-semibold uppercase tracking-widest mt-1">Attention</span>
-                    </div>
-                </div>
-
-                <!-- Detailed Grid -->
-                <div class="grid grid-cols-2 gap-3 w-full">
-                    <!-- Posture -->
-                    <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 flex flex-col items-center justify-center text-center">
-                        <i class="fas fa-user text-gray-500 mb-1 text-sm"></i>
-                        <span class="text-[10px] text-gray-400 uppercase tracking-wider">Posture</span>
-                        <span id="postureStatus" class="font-bold text-sm md:text-base text-gray-300">--</span>
-                    </div>
-                    <!-- Yaw -->
-                    <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 flex flex-col items-center justify-center text-center">
-                        <i class="fas fa-arrows-left-right text-gray-500 mb-1 text-sm"></i>
-                        <span class="text-[10px] text-gray-400 uppercase tracking-wider">Head Yaw</span>
-                        <span id="yawValue" class="font-bold text-sm md:text-base text-gray-300">0°</span>
-                    </div>
-                    <!-- Phone -->
-                    <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 flex flex-col items-center justify-center text-center">
-                        <i class="fas fa-mobile-alt text-gray-500 mb-1 text-sm"></i>
-                        <span class="text-[10px] text-gray-400 uppercase tracking-wider">Phone</span>
-                        <span id="phoneStatus" class="font-bold text-sm md:text-base text-gray-500">None</span>
-                    </div>
-                    <!-- People -->
-                    <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 flex flex-col items-center justify-center text-center">
-                        <i class="fas fa-users text-gray-500 mb-1 text-sm"></i>
-                        <span class="text-[10px] text-gray-400 uppercase tracking-wider">People</span>
-                        <span id="personCount" class="font-bold text-sm md:text-base text-gray-300">0</span>
-                    </div>
-                </div>
-
-                <!-- Desktop Status -->
-                <div class="mt-6 w-full text-center hidden md:block pt-4 border-t border-gray-700/50">
-                    <p class="text-xs text-gray-500">Server Status</p>
-                    <p id="wsStatusDesktop" class="text-sm font-mono text-red-400">Disconnected</p>
-                </div>
-            </div>
-
-            <!-- Metadata -->
-            <div class="glass-panel p-4">
-                <div class="flex flex-col gap-2 text-xs text-gray-400 font-mono">
-                    <div class="flex justify-between"><span>ID:</span> <span class="text-blue-400">demo-user-123</span></div>
-                    <div class="flex justify-between"><span>Session:</span> <span class="text-blue-400">sess-001</span></div>
-                    <div class="flex justify-between"><span>Updated:</span> <span id="lastSync" class="text-gray-300">--</span></div>
-                </div>
-            </div>
-
+    <!-- BOTTOM: Chart -->
+    <div class="glass-panel p-4 mt-6">
+        <h2 class="text-lg font-semibold mb-4">Focus Trend (Last 1 Hour)</h2>
+        <div class="h-64 w-full">
+            <canvas id="trendChart"></canvas>
         </div>
     </div>
 
@@ -154,23 +127,15 @@
 
         // --- Chart Setup ---
         const chartCtx = document.getElementById('trendChart').getContext('2d');
-        // Gradient for the chart
-        let gradient = chartCtx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
-        gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
-
         const trendChart = new Chart(chartCtx, {
             type: 'line',
             data: {
                 labels: [], 
                 datasets: [{
-                    label: 'Attention',
+                    label: 'Attention Score',
                     data: [],
                     borderColor: '#3b82f6',
-                    backgroundColor: gradient,
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     fill: true,
                     tension: 0.4
                 }]
@@ -178,78 +143,64 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: '#94a3b8',
-                        bodyColor: '#f8fafc',
-                        borderColor: '#334155',
-                        borderWidth: 1
-                    }
-                },
                 scales: {
-                    y: { 
-                        beginAtZero: true, 
-                        max: 1, 
-                        grid: { color: '#1e293b' },
-                        ticks: { color: '#64748b', font: {size: 10} }
-                    },
-                    x: { 
-                        grid: { display: false },
-                        ticks: { color: '#64748b', font: {size: 10}, maxTicksLimit: 6 }
-                    }
+                    y: { beginAtZero: true, max: 1, grid: { color: '#1e293b' } },
+                    x: { grid: { color: '#1e293b' } }
                 },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                }
+                plugins: { legend: { display: false } }
             }
         });
 
         // --- Camera Logic ---
         async function startCamera() {
             try {
-                const constraints = {
-                    video: {
-                        facingMode: "user", // Prefer front camera on mobile
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    },
-                    audio: false
-                };
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                // Added 'facingMode' for better mobile support
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 640 }, 
+                        height: { ideal: 480 },
+                        facingMode: "user" 
+                    }, 
+                    audio: false 
+                });
                 video.srcObject = stream;
                 video.onloadedmetadata = () => {
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                 };
             } catch (err) {
-                alert("Camera Access Error: " + err.name);
-                console.error(err);
+                alert("Error accessing camera: " + err);
             }
         }
 
-        // --- WebSocket Logic ---
+        // --- WebSocket Logic (First Iteration Style) ---
         function startSession() {
             if (ws) return;
             startCamera();
-            setConnectionStatus("Connecting...", "text-yellow-500");
 
-            ws = new WebSocket(`ws://${window.location.host}/ws/${USER_ID}/${SESSION_ID}`);
+            // Logic: If running on localhost/file, use localhost. 
+            // If accessing via IP (e.g., 192.168.x.x), use that IP.
+            let wsHost = "localhost:8000";
+            if (window.location.hostname && window.location.hostname !== "") {
+                 wsHost = window.location.hostname + ":8000";
+            }
+
+            console.log("Connecting to WS at: " + wsHost);
+            
+            ws = new WebSocket(`ws://${wsHost}/ws/${USER_ID}/${SESSION_ID}`);
 
             ws.onopen = () => {
-                setConnectionStatus("Connected", "text-emerald-500");
+                document.getElementById("wsStatus").innerText = "Connected";
+                document.getElementById("wsStatus").className = "text-green-500 font-mono text-xs";
                 document.getElementById("overlayInfo").classList.remove("hidden");
                 
                 // Send frames every 200ms (5 FPS)
                 intervalId = setInterval(() => {
                     if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        // Draw video to canvas
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        let base64 = canvas.toDataURL("image/jpeg", 0.6); // Lower quality for mobile speed
+                        // Convert to base64 (0.6 quality for speed)
+                        let base64 = canvas.toDataURL("image/jpeg", 0.6);
                         ws.send(base64);
                     }
                 }, 200); 
@@ -261,9 +212,15 @@
             };
 
             ws.onclose = () => {
-                setConnectionStatus("Disconnected", "text-red-500");
+                document.getElementById("wsStatus").innerText = "Disconnected";
+                document.getElementById("wsStatus").className = "text-red-500 font-mono text-xs";
                 document.getElementById("overlayInfo").classList.add("hidden");
                 stopSession();
+            };
+
+            ws.onerror = (error) => {
+                console.error("WS Error:", error);
+                document.getElementById("wsStatus").innerText = "Error";
             };
         }
 
@@ -272,32 +229,11 @@
             if (ws) ws.close();
             ws = null;
             intervalId = null;
-            const stream = video.srcObject;
-            if (stream) stream.getTracks().forEach(track => track.stop());
-            video.srcObject = null;
-            setConnectionStatus("Offline", "text-gray-500");
-        }
-
-        function setConnectionStatus(text, colorClass) {
-            // Desktop
-            const d = document.getElementById("wsStatusDesktop");
-            d.innerText = text;
-            d.className = `text-sm font-mono ${colorClass}`;
-            
-            // Mobile
-            const m = document.getElementById("wsStatusMobile");
-            m.innerText = text;
-            // Map text colors to bg/border for the pill style
-            let pillClass = "md:hidden text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border ";
-            if(text === "Connected") pillClass += "bg-emerald-900/30 text-emerald-400 border-emerald-800";
-            else if(text === "Connecting...") pillClass += "bg-yellow-900/30 text-yellow-400 border-yellow-800";
-            else pillClass += "bg-red-900/30 text-red-400 border-red-800";
-            
-            m.className = pillClass;
         }
 
         // --- UI Updates ---
         function updateDashboard(data) {
+            // Update Gauge
             const score = data.attention; 
             const circle = document.getElementById("scoreCircle");
             const radius = circle.r.baseVal.value;
@@ -311,35 +247,35 @@
 
             document.getElementById("scoreValue").innerText = (score * 100).toFixed(0) + "%";
 
-            // Metrics
-            document.getElementById("yawValue").innerText = Math.abs(data.head_angle_yaw).toFixed(0) + "°";
+            // Update Metrics
+            document.getElementById("yawValue").innerText = data.head_angle_yaw.toFixed(1) + "°";
             
             const postureElem = document.getElementById("postureStatus");
-            postureElem.innerText = data.posture > 0.5 ? "Good" : "Poor";
-            postureElem.className = "font-bold text-sm md:text-base " + (data.posture > 0.5 ? "text-emerald-400" : "text-rose-400");
+            postureElem.innerText = data.posture > 0.5 ? "Optimal" : "Poor";
+            postureElem.className = data.posture > 0.5 ? "text-green-400 font-bold" : "text-red-400 font-bold";
 
             const phoneElem = document.getElementById("phoneStatus");
-            phoneElem.innerText = data.phone === 1 ? "Yes" : "No";
-            phoneElem.className = "font-bold text-sm md:text-base " + (data.phone === 1 ? "text-rose-500" : "text-gray-500");
+            phoneElem.innerText = data.phone === 1 ? "DETECTED" : "None";
+            phoneElem.className = data.phone === 1 ? "text-red-500 font-bold" : "text-gray-400";
 
             const personElem = document.getElementById("personCount");
             personElem.innerText = data.yolo_person_count;
-            personElem.className = "font-bold text-sm md:text-base " + (data.yolo_person_count > 1 ? "text-rose-400" : "text-gray-300");
+            personElem.className = data.yolo_person_count > 1 ? "text-red-400 font-bold" : "text-gray-400";
 
-            document.getElementById("lastSync").innerText = new Date(data.timestamp).toLocaleTimeString([], {hour12: false});
+            document.getElementById("lastSync").innerText = new Date(data.timestamp).toLocaleTimeString();
 
-            // Chart
+            // Update Chart
             const timeLabel = new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
             
-            if (trendChart.data.labels.length === 0 || Math.random() > 0.7) {
+            if (trendChart.data.labels.length === 0 || Math.random() > 0.8) {
                 trendChart.data.labels.push(timeLabel);
                 trendChart.data.datasets[0].data.push(score);
                 
-                if (trendChart.data.labels.length > 30) {
+                if (trendChart.data.labels.length > 50) {
                     trendChart.data.labels.shift();
                     trendChart.data.datasets[0].data.shift();
                 }
-                trendChart.update('none'); // 'none' mode for smoother animation
+                trendChart.update();
             }
         }
     </script>
