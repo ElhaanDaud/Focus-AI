@@ -17,7 +17,7 @@ def calculate_attention_score(
     
     # RULE 2: Eyes closed/drowsy
     # eyes_score is 0.0 (closed) to 1.0 (open)
-    if eyes_score < 0.4:
+    if eyes_score < 0.2:
         score -= 0.4
 
     # RULE 3: Bad Posture
